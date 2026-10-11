@@ -56,6 +56,7 @@ class QAOASolver(Solver):
         final_shots: int = 1024,
         max_qubits: int = 16,
         seed: int | None = None,
+        warm_start: bool = True,
     ) -> None:
         self.reps = reps
         self.shots = shots
@@ -64,6 +65,7 @@ class QAOASolver(Solver):
         self.final_shots = final_shots
         self.max_qubits = max_qubits
         self.seed = seed
+        self.warm_start = warm_start
 
     def build_circuit(self, qubo: QUBO) -> tuple[QuantumCircuit, float]:
         """QAOA circuit for the QUBO, with H_C rescaled to max |coefficient| = 1.
@@ -115,11 +117,28 @@ class QAOASolver(Solver):
             bound = self._assign(circuit, theta[: self.reps], theta[self.reps :])
             return float(self._probabilities(bound, self.shots, rng) @ energies)
 
+        starts = [
+            np.concatenate([rng.uniform(0, 2 * np.pi, self.reps), rng.uniform(0, np.pi, self.reps)])
+            for _ in range(self.n_starts)
+        ]
+        if self.warm_start and self.reps > 1:
+            # Layer-by-layer warm start: optimise depth p-1, then add a new layer at
+            # gamma = beta = 0. That start reproduces the p-1 state exactly, so depth p
+            # cannot end up worse than depth p-1.
+            prev = QAOASolver(
+                reps=self.reps - 1,
+                shots=self.shots,
+                n_starts=self.n_starts,
+                maxiter=self.maxiter,
+                final_shots=self.final_shots,
+                max_qubits=self.max_qubits,
+                seed=self.seed,
+                warm_start=True,
+            ).solve(qubo)
+            starts.insert(0, np.array(prev.info["gammas"] + [0.0] + prev.info["betas"] + [0.0]))
+
         best: Any = None
-        for _ in range(self.n_starts):
-            theta0 = np.concatenate(
-                [rng.uniform(0, 2 * np.pi, self.reps), rng.uniform(0, np.pi, self.reps)]
-            )
+        for theta0 in starts:
             res = minimize(
                 expected_energy, theta0, method="COBYLA", options={"maxiter": self.maxiter}
             )
