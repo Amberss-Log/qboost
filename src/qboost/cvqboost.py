@@ -1,18 +1,10 @@
-"""Continuous-variable QBoost (CVQBoost), solved classically.
+"""CVQBoost: QBoost loss with continuous weights on the simplex (w_i >= 0, sum w_i = 1).
+This is the version QCi runs on Dirac-3.
 
-CVQBoost (Quantum Computing Inc.) keeps QBoost's squared loss but lets each weight be
-continuous on the probability simplex instead of 0/1:
+    min  w^T J w + C^T w,   J = H^T H / S + lam*I,   C = -2 H^T y / S
 
-    min_w  w^T J w + C^T w     subject to  w_i >= 0,  sum_i w_i = 1
-    J = H^T H / S + lam * I,   C = -2 H^T y / S
-
-QCi solves this on Dirac-3, whose hardware enforces the sum constraint natively. Here it
-is solved with a classical constrained optimiser (SLSQP). Because J is positive
-semi-definite, the problem is convex: the classical solution is the global optimum, which
-makes it the reference any hardware solver should be compared against.
-
-Note the binary trick w_j^2 = w_j used in ``qubo.py`` does *not* hold for continuous
-weights, so the linear term C is kept separate here.
+Solved here with scipy (SLSQP). J is PSD so it's convex and this is the global optimum.
+w_j^2 != w_j for continuous w, so C is kept separate (unlike qubo.py).
 """
 
 from dataclasses import dataclass
@@ -46,7 +38,7 @@ def cvqboost_problem(
 
 
 def solve_simplex_qp(qp: SimplexQP, tol: float = 1e-10) -> FloatArray:
-    """Global optimum of the convex QP on the probability simplex."""
+    """Solve the simplex-constrained QP with SLSQP."""
     n = qp.C.shape[0]
     res = minimize(
         qp.objective,

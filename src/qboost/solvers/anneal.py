@@ -1,8 +1,7 @@
-"""Simulated annealing: a Metropolis chain over bitstrings with a falling temperature.
+"""Simulated annealing for QUBOs.
 
-At fixed temperature T the chain samples the Boltzmann distribution p(w) ~ exp(-E(w)/T),
-exactly like a Metropolis-Hastings sampler with a symmetric single-bit-flip proposal.
-Lowering T concentrates that distribution on the ground state.
+Single bit-flip Metropolis moves with geometric cooling. At fixed T this samples
+p(w) ~ exp(-E(w)/T). The proposal is symmetric, so there is no Hastings correction.
 """
 
 import numpy as np
@@ -13,11 +12,9 @@ from qboost.solvers.base import Solver, SolveResult
 
 
 def metropolis_accept(delta: float, temperature: float, rng: np.random.Generator) -> bool:
-    """Decide whether to accept a proposed bit flip that changes the energy by ``delta``.
+    """Metropolis rule: accept downhill moves, otherwise accept with prob exp(-delta/T).
 
-    Downhill or flat moves are always accepted; uphill moves with probability
-    exp(-delta / T). Checking ``delta <= 0`` first means exp() only ever sees a
-    negative argument, so it can underflow to 0 but never overflow.
+    delta <= 0 is checked first so the exponent is always negative (no overflow).
     """
     if delta <= 0.0:
         return True
@@ -42,7 +39,7 @@ class SimulatedAnnealing(Solver):
         self.seed = seed
 
     def schedule(self, qubo: QUBO) -> npt.NDArray[np.float64]:
-        """Geometric cooling. Default T_start = the largest possible single-flip |dE|."""
+        """Geometric schedule. Default T0 = largest possible |dE| for a single flip."""
         Q = qubo.Q
         diag = np.abs(np.diag(Q))
         max_delta = float(np.max(diag + 2.0 * (np.abs(Q).sum(axis=1) - diag)))
@@ -78,7 +75,7 @@ class SimulatedAnnealing(Solver):
 
         return SolveResult(
             bits=best_bits.astype(np.int8),
-            # Recompute to remove floating-point drift from the incremental updates.
+            # recompute, the running energy drifts slightly
             energy=qubo.energy(best_bits),
             solver=self.name,
             info={"acceptance_rate": accepted / max(proposed, 1)},

@@ -1,8 +1,4 @@
-"""Dataset loading.
-
-Airline on-time data: OpenML dataset 1169 ("airlines"), derived from US Bureau of
-Transportation Statistics records. Target: 1 if the flight was delayed, else 0.
-"""
+"""Airline delay data (OpenML 1169, built from US BTS on-time records)."""
 
 from pathlib import Path
 
@@ -20,13 +16,13 @@ def load_airlines(
     seed: int = 0,
     cache_dir: Path = DEFAULT_CACHE,
 ) -> tuple[pd.DataFrame, npt.NDArray[np.int8]]:
-    """Return features and labels in {-1, +1} (+1 = delayed).
+    """Returns (X, y) with y = +1 for delayed, -1 otherwise.
 
-    Downloads once and caches under ``cache_dir``. ``n_samples`` draws a
-    reproducible random subset; pass ``None`` for all ~539k flights.
+    Cached in cache_dir after the first download. n_samples takes a random
+    subset (None = all ~539k rows).
     """
     bunch = fetch_openml(data_id=AIRLINES_OPENML_ID, as_frame=True, data_home=str(cache_dir))
-    # Flight number is an identifier, not a predictive feature.
+    # flight number is just an ID
     X: pd.DataFrame = bunch.data.drop(columns=["Flight"])
     y = np.where(bunch.target.astype(str) == "1", 1, -1).astype(np.int8)
 

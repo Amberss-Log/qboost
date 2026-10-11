@@ -1,7 +1,6 @@
-"""M0 experiment: exact vs simulated annealing on the QBoost QUBO for flight delays.
+"""Exact vs simulated annealing on the flight-delay QBoost problem -> results/m0.md
 
-Usage:  python scripts/run_m0.py  [--samples 20000] [--learners 12]
-Writes a markdown table to results/m0.md.
+python scripts/run_m0.py [--samples 20000] [--learners 12]
 """
 
 import argparse

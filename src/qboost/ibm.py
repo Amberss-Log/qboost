@@ -1,9 +1,8 @@
-"""IBM Quantum access. The API key is read from a local ``.env`` file and never printed.
+"""Connecting to IBM Quantum.
 
-``.env`` (gitignored) in the project root:
-
+Put the token in a .env file in the repo root (it's gitignored):
     IBM_QUANTUM_TOKEN=...
-    IBM_QUANTUM_INSTANCE=...   # optional: CRN or instance name
+    IBM_QUANTUM_INSTANCE=...   (optional)
 """
 
 import os
@@ -15,7 +14,7 @@ DEFAULT_ENV = PROJECT_ROOT / ".env"
 
 
 def load_env(path: Path = DEFAULT_ENV) -> dict[str, str]:
-    """Parse KEY=VALUE lines; ignores blanks and # comments; strips matching quotes."""
+    """Small .env reader: KEY=VALUE lines, # comments, optional quotes."""
     values: dict[str, str] = {}
     if not path.is_file():
         return values
@@ -32,7 +31,7 @@ def load_env(path: Path = DEFAULT_ENV) -> dict[str, str]:
 
 
 def get_service(env_path: Path = DEFAULT_ENV) -> Any:
-    """Authenticated QiskitRuntimeService for the IBM Quantum Platform."""
+    """QiskitRuntimeService using the token from .env (or environment variables)."""
     from qiskit_ibm_runtime import QiskitRuntimeService
 
     env = {**load_env(env_path), **{k: v for k, v in os.environ.items() if k.startswith("IBM_")}}

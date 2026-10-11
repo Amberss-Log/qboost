@@ -1,4 +1,4 @@
-"""Brute-force ground truth: evaluate all 2^n bitstrings in vectorised chunks."""
+"""Brute force over all 2^n bitstrings (in chunks). Fine up to ~20 variables."""
 
 import numpy as np
 

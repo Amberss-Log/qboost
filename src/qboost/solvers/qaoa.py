@@ -1,17 +1,10 @@
-"""QAOA (Farhi, Goldstone & Gutmann, 2014) for a QUBO, using Qiskit.
+"""QAOA for a QUBO with Qiskit (Farhi et al. 2014).
 
-The circuit starts in the uniform superposition over all 2^n bitstrings and applies
-``reps`` alternating layers:
+Each layer is exp(-i gamma H_C) followed by exp(-i beta sum X). COBYLA tunes the
+angles to minimise <H_C>, then the circuit is sampled and the best bitstring kept.
 
-    cost layer   exp(-i * gamma * H_C)   adds an energy-dependent phase to each bitstring
-    mixer layer  exp(-i * beta * sum X)  lets amplitude flow between neighbouring bitstrings
-
-A classical optimiser (COBYLA) tunes (gamma, beta) to minimise the expected energy
-<H_C>, then the circuit is sampled and the lowest-energy bitstring seen is returned.
-
-Two evaluation modes:
-* ``shots=None``: exact statevector probabilities (ideal, noiseless simulator).
-* ``shots=k``: k measurement samples per evaluation (finite sampling, like hardware).
+shots=None uses exact statevector probabilities. shots=k estimates them from k
+shots per evaluation instead (closer to real hardware).
 """
 
 from typing import Any
@@ -31,7 +24,7 @@ FloatArray = npt.NDArray[np.float64]
 
 
 def ising_operator(ising: Ising) -> SparsePauliOp:
-    """Cost Hamiltonian as Pauli-Z terms. Qubit j <-> QUBO variable j. Constant dropped."""
+    """Ising cost operator in Pauli-Z terms (constant dropped). Qubit j = variable j."""
     terms: list[tuple[str, list[int], float]] = [
         ("Z", [j], float(ising.h[j])) for j in range(ising.n) if ising.h[j] != 0.0
     ]
@@ -39,7 +32,7 @@ def ising_operator(ising: Ising) -> SparsePauliOp:
     terms += [
         ("ZZ", [int(j), int(k)], float(ising.J[j, k])) for j, k in zip(rows, cols, strict=True)
     ]
-    if not terms:  # degenerate all-zero problem: keep a valid operator
+    if not terms:  # all-zero problem, still need a valid operator
         terms = [("Z", [0], 0.0)]
     return SparsePauliOp.from_sparse_list(terms, num_qubits=ising.n)
 
@@ -68,10 +61,10 @@ class QAOASolver(Solver):
         self.warm_start = warm_start
 
     def build_circuit(self, qubo: QUBO) -> tuple[QuantumCircuit, float]:
-        """QAOA circuit for the QUBO, with H_C rescaled to max |coefficient| = 1.
+        """QAOA ansatz for the QUBO.
 
-        Rescaling does not change which bitstring is optimal, but keeps good gamma
-        values in a fixed range (0, 2*pi) whatever the problem's units.
+        H_C is scaled so its largest coefficient is 1. The optimum doesn't change,
+        but gamma stays in a sensible range for any problem.
         """
         op = ising_operator(qubo_to_ising(qubo))
         scale = float(np.max(np.abs(op.coeffs))) or 1.0
@@ -90,7 +83,7 @@ class QAOASolver(Solver):
     def _probabilities(
         self, circuit: QuantumCircuit, shots: int | None, rng: np.random.Generator
     ) -> FloatArray:
-        """Probability of each bitstring index (bit j of the index = qubit j = variable j)."""
+        """Probability of each bitstring index, exact or estimated from shots."""
         probs: FloatArray = Statevector(circuit).probabilities()
         if shots is None:
             return probs
@@ -104,7 +97,7 @@ class QAOASolver(Solver):
         rng = np.random.default_rng(self.seed)
         circuit, _ = self.build_circuit(qubo)
 
-        # Energy of every bitstring, in the same index order as Statevector.probabilities().
+        # energy of every bitstring, same order as Statevector.probabilities()
         powers = 1 << np.arange(n)
         all_bits = (np.arange(1 << n)[:, None] & powers) > 0
         energies = qubo.energies(all_bits)
@@ -122,9 +115,9 @@ class QAOASolver(Solver):
             for _ in range(self.n_starts)
         ]
         if self.warm_start and self.reps > 1:
-            # Layer-by-layer warm start: optimise depth p-1, then add a new layer at
-            # gamma = beta = 0. That start reproduces the p-1 state exactly, so depth p
-            # cannot end up worse than depth p-1.
+            # warm start: solve depth p-1 first and start depth p from those angles
+            # with the new layer at 0. That point is exactly the p-1 state, so p
+            # can't end up worse.
             prev = QAOASolver(
                 reps=self.reps - 1,
                 shots=self.shots,
@@ -145,7 +138,7 @@ class QAOASolver(Solver):
             if best is None or res.fun < best.fun:
                 best = res
 
-        # Final readout: sample the optimised circuit, keep the best bitstring observed.
+        # sample the final circuit and keep the best bitstring seen
         theta = best.x
         bound = self._assign(circuit, theta[: self.reps], theta[self.reps :])
         exact_probs = self._probabilities(bound, None, rng)

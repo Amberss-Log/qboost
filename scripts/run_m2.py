@@ -1,12 +1,8 @@
-"""M2 experiment: the full comparison.
+"""Main comparison -> results/m2.md (takes ~5 min)
 
-A. Classification on held-out flights: majority class, logistic regression, QBoost
-   (exact / simulated annealing / QAOA), and continuous CVQBoost.
-B. QAOA depth with layer-wise warm start (ideal simulator).
-C. QAOA under a real IBM device noise model (FakeTorino, 133-qubit Heron), no hardware.
-
-Usage:  python scripts/run_m2.py
-Writes results/m2.md.
+A. test accuracy: majority class, logistic regression, QBoost (exact / SA / QAOA), CVQBoost
+B. QAOA at depth 1-3 with warm start
+C. QAOA with the FakeTorino noise model
 """
 
 import time

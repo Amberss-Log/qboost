@@ -1,4 +1,4 @@
-"""QBoostClassifier: fit candidate stumps, build the QUBO, let a solver pick the ensemble."""
+"""QBoost classifier: stumps -> QUBO -> solver -> vote."""
 
 import numpy as np
 import numpy.typing as npt
@@ -21,7 +21,7 @@ class QBoostClassifier:
         self.qubo_: QUBO = qboost_qubo(H, y, self.lam)
         self.result_: SolveResult = self.solver.solve(self.qubo_)
         self.selected_ = [s for s, b in zip(self.candidates_, self.result_.bits, strict=True) if b]
-        # Ties (including an empty ensemble) go to the training majority class.
+        # if the vote is 0 (or nothing got picked) use the majority class
         self.tie_label_ = 1 if np.mean(y == 1) >= 0.5 else -1
         return self
 

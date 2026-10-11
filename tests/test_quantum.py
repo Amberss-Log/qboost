@@ -27,8 +27,8 @@ def test_ising_energy_matches_qubo_for_every_bitstring(seed):
 
 
 def test_operator_diagonal_matches_qubo_with_qiskit_bit_order():
-    """Checks qubit j <-> variable j: the operator's diagonal, indexed the way Qiskit
-    indexes basis states, must equal the QUBO energies (up to the dropped constant)."""
+    # checks qubit j = variable j: the operator diagonal (in Qiskit's basis order)
+    # should equal the QUBO energies once the constant is added back
     qubo = random_qubo(4, 3)
     ising = qubo_to_ising(qubo)
     diag = np.real(ising_operator(ising).to_matrix().diagonal())

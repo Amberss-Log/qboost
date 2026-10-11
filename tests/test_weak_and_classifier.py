@@ -17,7 +17,7 @@ def toy() -> tuple[pd.DataFrame, np.ndarray]:
             "airline": pd.Categorical(rng.choice(["AA", "WN", "DL"], n)),
         }
     )
-    # Late flights on WN are delayed; label noise keeps it from being trivial.
+    # late flights or WN -> delayed, plus 10% label noise
     signal = (X["time"] > 1500) | (X["airline"] == "WN")
     noise = rng.random(n) < 0.1
     y = np.where(signal ^ noise, 1, -1).astype(np.int8)

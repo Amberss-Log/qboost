@@ -1,4 +1,4 @@
-"""Common solver interface: every backend takes the same QUBO and returns a SolveResult."""
+"""Solver base class. Every solver takes a QUBO and returns a SolveResult."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field

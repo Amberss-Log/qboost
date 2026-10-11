@@ -1,8 +1,6 @@
-"""M1 experiment: QAOA (ideal simulator) vs exact vs simulated annealing on the
-QBoost QUBO for flight delays, as the number of qubits grows.
+"""QAOA (ideal sim) vs exact vs annealing for 4-12 qubits -> results/m1.md
 
-Usage:  python scripts/run_m1.py  [--samples 20000] [--lam 0.0]
-Writes a markdown table to results/m1.md.
+python scripts/run_m1.py [--samples 20000] [--lam 0.0]
 """
 
 import argparse

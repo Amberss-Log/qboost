@@ -1,12 +1,10 @@
-"""QUBO -> Ising conversion.
+"""QUBO -> Ising.
 
-Substituting w_j = (1 - z_j) / 2 with spins z_j in {+1, -1} turns a QUBO into
+With w = (1 - z)/2 and z in {+1, -1}:
+    E(z) = const + sum_j h_j z_j + sum_{j<k} J_jk z_j z_k
 
-    E(z) = const + sum_j h_j z_j + sum_{j<k} J_jk z_j z_k.
-
-Quantum hardware measures the Pauli-Z operator, whose eigenvalues are exactly these
-spins: qubit state |0> has z = +1 (w = 0) and |1> has z = -1 (w = 1). So the
-bitstring read out of a qubit register *is* the QUBO assignment w.
+z is the Pauli-Z eigenvalue: |0> -> z=+1 -> w=0, |1> -> z=-1 -> w=1. So a measured
+bitstring can be read directly as the QUBO solution.
 """
 
 from dataclasses import dataclass
@@ -35,11 +33,11 @@ class Ising:
 
 
 def qubo_to_ising(qubo: QUBO) -> Ising:
-    """Exact conversion; E_ising(1 - 2w) == E_qubo(w) for every bitstring w."""
+    """Convert a QUBO to Ising form. E_ising(1 - 2w) == E_qubo(w)."""
     Q = qubo.Q
     diag = np.diag(Q)
     off = Q - np.diag(diag)  # symmetric, zero diagonal
-    # E = sum_j Q_jj w_j + sum_{j<k} 2 Q_jk w_j w_k + offset, then substitute w = (1 - z)/2.
+    # E = sum_j Q_jj w_j + 2 sum_{j<k} Q_jk w_j w_k + offset, then put w = (1 - z)/2
     h = -diag / 2.0 - off.sum(axis=1) / 2.0
     J = np.triu(off, k=1) / 2.0
     const = qubo.offset + diag.sum() / 2.0 + np.triu(off, k=1).sum() / 2.0

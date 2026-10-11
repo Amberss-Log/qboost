@@ -1,8 +1,7 @@
-"""Run an optimised QAOA circuit on a backend: an IBM device noise model or real hardware.
+"""Run a QAOA circuit on a backend (fake/noisy simulator or a real IBM device).
 
-The workflow mirrors what is practical on today's devices: tune (gamma, beta) on an
-ideal simulator, then execute only the final circuit on the noisy backend and measure.
-The same functions accept a real IBM backend from ``QiskitRuntimeService`` unchanged.
+The angles are optimised on the ideal simulator first; only the final circuit is
+sent to the backend.
 """
 
 from typing import Any
@@ -24,7 +23,7 @@ def build_isa_circuit(
     backend: Any,
     seed: int = 0,
 ) -> QuantumCircuit:
-    """Bind the angles, add measurements, and compile to the backend's native gates/layout."""
+    """Bind the angles, add measurements and transpile for the backend."""
     circuit, _ = solver.build_circuit(qubo)
     bound = solver._assign(circuit, np.asarray(gammas), np.asarray(betas))
     bound.measure_all()
@@ -33,10 +32,10 @@ def build_isa_circuit(
 
 
 def analyse_counts(qubo: QUBO, counts: dict[str, int]) -> dict[str, Any]:
-    """Score measured bitstrings against the QUBO.
+    """Stats for a counts dict.
 
-    Qiskit writes bitstrings with qubit 0 on the right, so int(s, 2) is the index whose
-    bit j is qubit j = QUBO variable j.
+    Qiskit puts qubit 0 on the right of the bitstring, so int(s, 2) matches the
+    index ordering used everywhere else.
     """
     n = qubo.n
     shots = sum(counts.values())
@@ -68,7 +67,7 @@ def run_on_backend(
     shots: int = 4096,
     seed: int = 0,
 ) -> dict[str, Any]:
-    """Compile, sample once on ``backend``, and score the result."""
+    """Transpile, run once and return the stats."""
     isa = build_isa_circuit(qubo, solver, gammas, betas, backend, seed)
     counts: dict[str, int] = (
         SamplerV2(mode=backend).run([isa], shots=shots).result()[0].data.meas.get_counts()

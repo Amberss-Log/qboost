@@ -1,14 +1,11 @@
-"""Run QBoost-QAOA (p=1) on a real IBM Quantum processor.
+"""QAOA (p=1) on a real IBM device, 4 and 6 qubits, same data as run_m2.
 
-Same problems as M2 (20,000 flights, seed 0) at 4 and 6 qubits. Angles are optimised on
-the ideal simulator; only the final circuits go to the QPU, in a single job. The same
-compiled circuits are also run on the backend's own noise model for comparison.
+Angles come from the ideal simulator; both circuits go to the QPU as one job and
+are also run on that backend's noise model to compare.
 
-Usage:
-    python scripts/run_hardware.py --dry-run          # FakeTorino, no API key needed
-    python scripts/run_hardware.py                    # real hardware (key in .env)
-    python scripts/run_hardware.py --job-id <id>      # fetch a job submitted earlier
-Writes results/hardware.md and results/hardware_counts.json.
+    python scripts/run_hardware.py --dry-run       # FakeTorino, no token needed
+    python scripts/run_hardware.py                 # real device (token in .env)
+    python scripts/run_hardware.py --job-id <id>   # get results of an earlier job
 """
 
 import argparse
@@ -105,7 +102,7 @@ def main() -> None:
             return
     hw = job.result()
 
-    # Same compiled circuits on the backend's noise model (local simulation).
+    # same circuits on the backend's noise model, locally
     sim = AerSimulator.from_backend(backend)
     sim_res = SamplerV2(mode=sim).run(isas, shots=args.shots).result()
 

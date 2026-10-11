@@ -1,8 +1,4 @@
-"""Decision-stump weak learners.
-
-Each stump looks at one feature and votes +1 or -1. QBoost then chooses which
-stumps to keep, so the number of candidate stumps is the number of qubits.
-"""
+"""Decision stumps (the weak learners). Each candidate stump is one variable / qubit."""
 
 from dataclasses import dataclass
 
@@ -13,9 +9,9 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class Stump:
-    """Votes ``polarity`` if the condition holds, else ``-polarity``.
+    """Votes +polarity when the condition is true, -polarity otherwise.
 
-    Numeric features use ``x > threshold``; categorical features use ``x == category``.
+    numeric feature: x > threshold, categorical: x == category
     """
 
     feature: str
@@ -48,7 +44,7 @@ class Stump:
 def candidate_stumps(
     X: pd.DataFrame, n_thresholds: int = 8, top_categories: int = 10
 ) -> list[Stump]:
-    """Quantile thresholds for numeric columns, most frequent values for categorical ones."""
+    """Quantile thresholds for numeric columns, top categories for the rest."""
     stumps: list[Stump] = []
     for name in X.columns:
         col = X[name]
@@ -63,7 +59,7 @@ def candidate_stumps(
 
 
 def predict_matrix(stumps: list[Stump], X: pd.DataFrame) -> npt.NDArray[np.int8]:
-    """H[s, j] = vote of stump j on sample s, shape (n_samples, n_stumps)."""
+    """H[s, j] = vote of stump j on sample s."""
     return np.column_stack([s.predict(X) for s in stumps]).astype(np.int8)
 
 
@@ -74,10 +70,10 @@ def fit_stumps(
     n_thresholds: int = 8,
     top_categories: int = 10,
 ) -> list[Stump]:
-    """Pick the polarity of every candidate, then keep the ``n_learners`` most accurate.
+    """Flip polarity where needed and keep the n_learners most accurate stumps.
 
-    Many of these will be redundant (e.g. Time > 900 and Time > 1000). That is
-    fine: the QUBO's off-diagonal terms penalise selecting correlated stumps.
+    Several of these end up correlated (Time > 900, Time > 1000, ...). The
+    off-diagonal terms in Q penalise picking those together.
     """
     scored: list[tuple[float, Stump]] = []
     for s in candidate_stumps(X, n_thresholds, top_categories):

@@ -1,4 +1,4 @@
-"""QBoost: sparse ensemble selection as a QUBO, with pluggable classical and quantum solvers."""
+"""QBoost ensemble selection written as a QUBO, plus a few solvers for it."""
 
 from qboost.classifier import QBoostClassifier
 from qboost.qubo import QUBO, qboost_qubo

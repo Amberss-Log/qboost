@@ -1,14 +1,14 @@
-"""QUBO container and the QBoost formulation (Neven, Denchev, Rose & Macready, 2008).
+"""QUBO class and the QBoost loss (Neven et al. 2008).
 
-QBoost loss for binary weights w in {0,1}^n, weak-learner votes H (S x n), labels y in {-1,+1}:
+For w in {0,1}^n, stump votes H (S x n) and labels y in {-1,+1}:
 
-    L(w) = (1/S) * sum_s ( (1/n) * sum_j w_j H[s,j] - y_s )^2  +  lam * sum_j w_j
+    L(w) = mean_s ((1/n) sum_j w_j H[s,j] - y_s)^2 + lam * sum_j w_j
 
-Expanding the square and using w_j^2 = w_j gives L(w) = w^T Q w + offset with
+Expanding the square and using w_j^2 = w_j:
 
-    Q        = H^T H / (n^2 S)
-    Q_jj    += -2 (H^T y)_j / (n S) + lam
-    offset   = 1                         (since y_s^2 = 1)
+    Q      = H^T H / (n^2 S)
+    Q_jj  += -2 (H^T y)_j / (n S) + lam
+    offset = 1   (because y_s^2 = 1)
 """
 
 from dataclasses import dataclass
@@ -21,7 +21,7 @@ FloatArray = npt.NDArray[np.float64]
 
 @dataclass(frozen=True)
 class QUBO:
-    """Minimise E(w) = w^T Q w + offset over w in {0,1}^n. Q is symmetric."""
+    """E(w) = w^T Q w + offset for w in {0,1}^n. Q has to be symmetric."""
 
     Q: FloatArray
     offset: float = 0.0
@@ -41,14 +41,14 @@ class QUBO:
         return float(v @ self.Q @ v + self.offset)
 
     def energies(self, W: npt.ArrayLike) -> FloatArray:
-        """Energies for a batch of bitstrings, shape (batch, n)."""
+        """Energy for each row of a (batch, n) array of bitstrings."""
         M = np.asarray(W, dtype=float)
         E: FloatArray = np.einsum("bi,ij,bj->b", M, self.Q, M) + self.offset
         return E
 
 
 def qboost_qubo(H: npt.NDArray[np.integer], y: npt.NDArray[np.integer], lam: float) -> QUBO:
-    """Build the QBoost QUBO. ``lam`` > 0 rewards sparser ensembles."""
+    """QBoost QUBO. Bigger lam -> fewer stumps get picked."""
     S, n = H.shape
     if y.shape != (S,):
         raise ValueError(f"y has shape {y.shape}, expected ({S},).")
@@ -61,7 +61,7 @@ def qboost_qubo(H: npt.NDArray[np.integer], y: npt.NDArray[np.integer], lam: flo
 def qboost_loss(
     H: npt.NDArray[np.integer], y: npt.NDArray[np.integer], w: npt.ArrayLike, lam: float
 ) -> float:
-    """The QBoost loss computed directly (used to test the QUBO expansion)."""
+    """Same loss computed directly, only used to check the QUBO in tests."""
     v = np.asarray(w, dtype=float)
     n = H.shape[1]
     residual = H @ v / n - y
