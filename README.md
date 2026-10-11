@@ -6,8 +6,8 @@ solvers on it: exhaustive search, simulated annealing, and the Quantum Approxima
 Optimization Algorithm (QAOA) implemented in Qiskit. The application is flight-delay
 prediction on US airline data.
 
-**Status:** in progress. All results below were obtained on classical hardware or
-quantum simulators. Runs on IBM Quantum hardware are in progress.
+**Status:** in progress. QAOA has been run on IBM Quantum hardware (ibm_kingston) at
+4 and 6 qubits; all other results were obtained on classical hardware or simulators.
 
 ## Contents
 
@@ -124,6 +124,22 @@ QAOA ($p = 1$) sampled under the IBM Torino noise model:
 The two-qubit gate count grows quickly with problem size because of limited qubit
 connectivity, and the success probability degrades accordingly. At 8 qubits it remains
 about 12 times higher than random guessing.
+
+### IBM Quantum hardware
+
+QAOA ($p = 1$) on **ibm_kingston** (156-qubit Heron processor), 4,096 shots per circuit,
+4 s of QPU time. Angles were optimized on the ideal simulator; the same compiled circuits
+were also sampled under the backend's noise model for comparison
+([`results/hardware.md`](results/hardware.md)).
+
+| Qubits | Random guess | Ideal | Noise model | Hardware | Two-qubit gates | Circuit depth |
+|---|---|---|---|---|---|---|
+| 4 | 0.0625 | 0.150 | 0.150 | 0.162 | 18 | 64 |
+| 6 | 0.0156 | 0.108 | 0.099 | 0.094 | 53 | 147 |
+
+On hardware the optimal ensemble was measured in 9.4% of shots at 6 qubits, close to the
+ideal 10.8% and about six times random guessing. The 4-qubit hardware value is within
+sampling error of the ideal one (standard error about 0.006 at 4,096 shots).
 
 ## Usage
 
