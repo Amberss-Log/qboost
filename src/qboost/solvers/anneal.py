@@ -13,9 +13,15 @@ from qboost.solvers.base import Solver, SolveResult
 
 
 def metropolis_accept(delta: float, temperature: float, rng: np.random.Generator) -> bool:
-    """Decide whether to accept a proposed bit flip that changes the energy by ``delta``."""
-    # TODO(human)
-    raise NotImplementedError
+    """Decide whether to accept a proposed bit flip that changes the energy by ``delta``.
+
+    Downhill or flat moves are always accepted; uphill moves with probability
+    exp(-delta / T). Checking ``delta <= 0`` first means exp() only ever sees a
+    negative argument, so it can underflow to 0 but never overflow.
+    """
+    if delta <= 0.0:
+        return True
+    return bool(rng.random() < np.exp(-delta / temperature))
 
 
 class SimulatedAnnealing(Solver):
