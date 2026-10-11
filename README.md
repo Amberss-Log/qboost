@@ -1,8 +1,9 @@
 # QBoost: sparse ensemble selection as a QUBO
 
 > **Status: in progress (started Oct 2026).** Implemented: QUBO formulation, decision-stump weak
-> learners, exact and simulated-annealing solvers, tests. Not yet implemented: QAOA (Qiskit),
-> IBM Quantum hardware runs. No quantum results are claimed below until they exist.
+> learners, exact and simulated-annealing solvers, QAOA on an ideal (noiseless) Qiskit simulator,
+> tests. Not yet done: noisy simulation, IBM Quantum hardware runs. Every result below is from a
+> classical computer or a noiseless simulator.
 
 ## The problem
 
@@ -26,17 +27,29 @@ Transportation Statistics on-time records; ~539k flights, 44.5% delayed).
 |---|---|---|
 | `ExactSolver` | done | Brute force over $2^n$; ground truth up to ~22 variables |
 | `SimulatedAnnealing` | done | Metropolis single-flip chain with geometric cooling |
-| QAOA (Qiskit Aer) | planned | Same QUBO mapped to an Ising Hamiltonian |
-| QAOA (IBM Quantum hardware) | planned | Small instances only |
+| `QAOASolver` | done (ideal simulator) | QUBO -> Ising Hamiltonian; COBYLA outer loop; optional shot sampling |
+| QAOA on IBM Quantum hardware | planned | Small instances only |
+
+## Results so far
+
+- [`results/m0.md`](results/m0.md): 20k flights, 12 candidate stumps. Simulated annealing matches
+  the exact optimum at every lambda tested; QBoost keeps 2-3 of 12 stumps and reaches 61.3% test
+  accuracy vs a 55.2% majority-class baseline (no stronger classical baseline compared yet).
+- [`results/m1.md`](results/m1.md): QAOA on the same QUBO, 4-12 qubits, noiseless simulator.
+  Depth p=1 raises the probability of measuring the optimal ensemble above random guessing at
+  every size (e.g. 0.0068 vs 0.0002 at 12 qubits). Depth p=2 was *worse* than p=1 at 8-12 qubits
+  with random initial angles, which points to the classical optimiser getting stuck, not to a
+  limit of the circuit (p=2 contains p=1). Next: warm-start p=2 from the p=1 optimum.
 
 ## Quick start
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # Windows
-pip install -e ".[dev]"
+pip install -e ".[quantum,dev]"
 pytest
 python scripts/run_m0.py          # downloads the dataset once, writes results/m0.md
+python scripts/run_m1.py          # QAOA vs exact vs annealing, writes results/m1.md
 ```
 
 ## Layout
@@ -46,10 +59,11 @@ src/qboost/
   data.py           dataset loading
   weak.py           decision stumps
   qubo.py           QUBO container + QBoost formulation
+  ising.py          QUBO -> Ising conversion (spins = Pauli-Z eigenvalues)
   classifier.py     QBoostClassifier (fit stumps -> build QUBO -> solve)
-  solvers/          base interface, exact, simulated annealing
+  solvers/          base interface, exact, simulated annealing, QAOA
 tests/              pytest suite
-scripts/run_m0.py   first experiment
+scripts/            run_m0.py (classical), run_m1.py (QAOA)
 ```
 
 ## References
